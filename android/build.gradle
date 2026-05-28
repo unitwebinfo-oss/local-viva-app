@@ -7,9 +7,9 @@ allprojects {
 
 ext {
     flutter = [
-        compileSdkVersion: 34,
+        compileSdkVersion: 35,
         minSdkVersion: 21,
-        targetSdkVersion: 34
+        targetSdkVersion: 35
     ]
 }
 
@@ -19,7 +19,7 @@ subprojects {
     afterEvaluate { project ->
         if (project.hasProperty("android")) {
             project.android {
-                compileSdkVersion 34
+                compileSdkVersion 35
                 if (namespace == null || namespace.isEmpty()) {
                     namespace = "com.localviva." + project.name.replace("-", "_").replace(":", ".")
                 }
