@@ -19,6 +19,7 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/messages/messages_screen.dart';
 import 'screens/ads/ad_detail_screen.dart';
 import 'utils/theme.dart';
+import 'services/error_reporting_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +32,22 @@ void main() {
     }
   }
 
-  runApp(const LocalVivaApp());
+  // Initialize error reporting
+  ErrorReportingService.initialize();
+
+  // Capture all uncaught errors
+  runZonedGuarded(
+    () {
+      runApp(const LocalVivaApp());
+    },
+    (error, stack) {
+      ErrorReportingService.reportError(
+        error: error,
+        stackTrace: stack,
+        context: 'Uncaught zone error',
+      );
+    },
+  );
 }
 
 class LocalVivaApp extends StatelessWidget {

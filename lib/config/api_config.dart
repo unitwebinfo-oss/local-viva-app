@@ -22,6 +22,9 @@ class ApiConfig {
   static const String uploadUrl = 'https://localviva.com.br/uploads';
   static const String imageProxyUrl = 'https://localviva.com.br/api/proxy_image.php';
   
+  // Error reporting
+  static const String appErrors = '/app/errors';
+
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
