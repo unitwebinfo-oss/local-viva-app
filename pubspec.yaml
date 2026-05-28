@@ -1,0 +1,55 @@
+name: local_viva
+description: Aplicativo oficial do Local Viva - Compre e venda no seu bairro
+publish_to: 'none'
+version: 1.0.0+4
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # UI
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.9
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Network
+  http: ^1.1.2
+  dio: ^5.4.0
+  
+  # Storage
+  shared_preferences: ^2.2.2
+  webview_flutter: ^4.7.0
+  webview_flutter_android: ^4.3.2
+  webview_flutter_wkwebview: ^3.12.0
+  
+  # Image
+  image_picker: ^1.0.7
+  
+  # Location
+  geolocator: ^9.0.2
+  geolocator_android: ^4.1.3
+  geocoding: ^2.2.2
+  
+  # Utils
+  intl: ^0.20.2
+  url_launcher: ^6.2.4
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
