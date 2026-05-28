@@ -29,7 +29,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.localviva.app"
+    namespace = "com.localviva"
     compileSdk = flutter.compileSdkVersion
 
     compileOptions {
@@ -46,7 +46,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.localviva.app"
+        applicationId = "com.localviva"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutterVersionCode.toInteger()
