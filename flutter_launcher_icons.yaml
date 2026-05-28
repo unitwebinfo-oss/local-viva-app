@@ -1,0 +1,18 @@
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/favicon.png"
+  
+  # Adaptive icon configuration for Android
+  adaptive_icon_background: "#4CAF50"
+  adaptive_icon_foreground: "assets/images/favicon.png"
+  
+  # Min SDK for adaptive icons
+  min_sdk_android: 21
+  
+  # Web favicon
+  web:
+    generate: true
+    image_path: "assets/images/favicon.png"
+    background_color: "#4CAF50"
+    theme_color: "#4CAF50"
