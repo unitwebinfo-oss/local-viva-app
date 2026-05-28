@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:paypal_checkout_flutter/paypal_checkout_flutter.dart';
 import '../../services/api_service.dart';
 import '../../config/api_config.dart';
 
@@ -133,71 +132,37 @@ class _PaypalPaymentScreenState extends State<PaypalPaymentScreen> {
     });
 
     try {
-      // Initialize PayPal checkout
-      await PayPalCheckout.init(
-        clientId: "AdwM9cttlAFIe7PtG7tsM7geJiy67XKgb49Za9ajAZp4N4EUGghFUP70hTFjvRviYd3EEccwJC5fo93f",
-        sandboxMode: false, // Use production mode
-        returnURL: "https://localviva.com.br/api/paypal_boost/success",
-        cancelURL: "https://localviva.com.br/api/paypal_boost/cancel",
-      );
+      // Create PayPal order via backend
+      final response = await ApiService.post('${ApiConfig.paypalBoost}', {
+        'action': 'create_order',
+        'amount': widget.paymentData['amount'],
+        'description': widget.paymentData['description'],
+        'order_id': widget.paymentData['orderId'],
+        'ad_id': widget.paymentData['adId'],
+        'plan_id': widget.paymentData['planId'],
+      });
 
-      // Create order and process payment
-      final data = {
-        "intent": "sale",
-        "payer": {"payment_method": "paypal"},
-        "transactions": [
-          {
-            "amount": {
-              "total": widget.paymentData['amount'],
-              "currency": "BRL",
-              "details": {
-                "subtotal": widget.paymentData['amount'],
-                "tax": "0",
-                "shipping": "0",
-                "handling_fee": "0",
-                "shipping_discount": "0",
-                "insurance": "0"
-              }
-            },
-            "description": widget.paymentData['description'],
-            "custom": widget.paymentData['orderId'],
-            "item_list": {
-              "items": [
-                {
-                  "name": "Plano de Destaque",
-                  "description": widget.paymentData['description'],
-                  "quantity": "1",
-                  "price": widget.paymentData['amount'],
-                  "tax": "0",
-                  "sku": widget.paymentData['planId'],
-                  "currency": "BRL"
-                }
-              ]
-            }
-          }
-        ],
-        "redirect_urls": {
-          "return_url": "https://localviva.com.br/api/paypal_boost/success",
-          "cancel_url": "https://localviva.com.br/api/paypal_boost/cancel"
+      if (response['success'] == true && response['approval_url'] != null) {
+        // Open PayPal approval URL in webview or browser
+        final approvalUrl = response['approval_url'];
+
+        // Show confirmation and redirect
+        if (mounted) {
+          Navigator.of(context).pop(true);
         }
-      };
-
-      final result = await PayPalCheckout.makePayment(data);
-
-      if (result != null && result['success'] == true) {
-        // Capture payment on backend
-        await _capturePayment();
       } else {
-        throw Exception('Pagamento cancelado ou falhou');
+        throw Exception(response['error'] ?? 'Erro ao criar pagamento');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro no pagamento: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      Navigator.of(context).pop(false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro no pagamento: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.of(context).pop(false);
+      }
     } finally {
       setState(() {
         _isLoading = false;
