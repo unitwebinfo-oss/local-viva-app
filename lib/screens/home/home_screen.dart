@@ -663,7 +663,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/login');
+                    Navigator.of(context, rootNavigator: true).pushNamed('/login');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
