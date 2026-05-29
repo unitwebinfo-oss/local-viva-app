@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ads_provider.dart';
 import '../../providers/favorites_provider.dart';
@@ -26,11 +27,19 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   AdModel? _ad;
   bool _isLoading = true;
   Map<String, dynamic>? _adDetailBanner;
+  final PageController _pageController = PageController();
+  int _currentImageIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadAd();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<bool> _onWillPop() async {
@@ -94,6 +103,13 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
   }
 
+  void _shareAd() {
+    if (_ad == null) return;
+    final text = 'Confira este anúncio no Local Viva: ${_ad!.title} - ${_ad!.formattedPrice}\n'
+        'https://localviva.com.br/anuncio/${_ad!.id}';
+    Share.share(text);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -127,11 +143,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 320,
             pinned: true,
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             actions: [
+              IconButton(
+                icon: const Icon(Icons.share_outlined, color: Colors.white),
+                onPressed: _shareAd,
+              ),
               Consumer<FavoritesProvider>(
                 builder: (context, favProvider, child) {
                   final isFavorited = favProvider.isFavorited(_ad!.id);
@@ -149,38 +169,91 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: _ad!.images.isNotEmpty
-                  ? PageView.builder(
-                      itemCount: _ad!.images.length,
-                      itemBuilder: (context, index) {
-                        return CachedNetworkImage(
-                          imageUrl: _ad!.images[index],
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[200],
-                            child: const Center(
-                              child: CircularProgressIndicator(),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _ad!.images.isNotEmpty
+                      ? PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() => _currentImageIndex = index);
+                          },
+                          itemCount: _ad!.images.length,
+                          itemBuilder: (context, index) {
+                            return CachedNetworkImage(
+                              imageUrl: _ad!.images[index],
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[200],
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.image,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                        ),
+                  // Image counter
+                  if (_ad!.images.length > 1)
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          _ad!.images.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: _currentImageIndex == index ? 20 : 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              color: _currentImageIndex == index
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.5),
                             ),
                           ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey[200],
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              size: 48,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.image,
-                        size: 48,
-                        color: Colors.grey,
+                        ),
                       ),
                     ),
+                  // Gradient overlay at bottom for indicator visibility
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 60,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.3),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           SliverToBoxAdapter(
@@ -194,22 +267,62 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     style: AppTextStyles.heading2,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _ad!.formattedPrice,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  if (_ad!.negotiable)
-                    const Text(
-                      'Preço negociável',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
+                  Row(
+                    children: [
+                      Text(
+                        _ad!.formattedPrice,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
+                      if (_ad!.negotiable) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                          ),
+                          child: const Text(
+                            'Negociável',
+                            style: TextStyle(
+                              color: AppColors.success,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Badges row
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (_ad!.conditionType != null && _ad!.conditionType != 'not_applicable')
+                        _buildBadge(
+                          _ad!.conditionType == 'new' ? 'Novo' : 'Usado',
+                          _ad!.conditionType == 'new' ? Colors.green : Colors.orange,
+                          _ad!.conditionType == 'new' ? Icons.fiber_new : Icons.handshake,
+                        ),
+                      if (_ad!.isBoosted)
+                        _buildBadge(
+                          'Destaque',
+                          AppColors.primary,
+                          Icons.local_fire_department,
+                        ),
+                      _buildBadge(
+                        _ad!.categoryName ?? 'Geral',
+                        AppColors.secondary,
+                        Icons.category_outlined,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   const Text(
                     'Descrição',
@@ -219,24 +332,34 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   Text(
                     _ad!.description,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 15,
                       color: AppColors.textPrimary,
-                      height: 1.4,
+                      height: 1.5,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Informações',
-                    style: AppTextStyles.heading3,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoRow('Categoria', _ad!.categoryName ?? 'Não informada'),
-                  _buildInfoRow('Localização', _ad!.location),
-                  if (_ad!.conditionType != null && _ad!.conditionType != 'not_applicable')
-                    _buildInfoRow(
-                      'Condição',
-                      _ad!.conditionType == 'new' ? 'Novo' : 'Usado',
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Informações',
+                          style: AppTextStyles.heading3,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(Icons.location_on_outlined, 'Localização', _ad!.location),
+                        if (_ad!.cep != null && _ad!.cep!.isNotEmpty)
+                          _buildInfoRow(Icons.map_outlined, 'CEP', _ad!.cep!),
+                        _buildInfoRow(Icons.access_time, 'Publicado', _ad!.timeAgo),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   if (_ad!.sellerName != null) ...[
                     const Text(
@@ -278,57 +401,103 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         ],
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
-          child: ElevatedButton.icon(
-            onPressed: _launchWhatsApp,
-            icon: const Icon(Icons.chat),
-            label: const Text('Entrar em contato'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF25D366),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _launchWhatsApp,
+                  icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                  label: const Text(
+                    'Conversar no WhatsApp',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
-        ),
+      ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.body,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

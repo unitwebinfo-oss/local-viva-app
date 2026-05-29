@@ -199,6 +199,28 @@ class AdModel {
     return 'Localização não informada';
   }
 
+  String get timeAgo {
+    if (createdAt == null) return 'Data não informada';
+    final date = DateTime.tryParse(createdAt!);
+    if (date == null) return 'Data não informada';
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays > 365) {
+      final years = (diff.inDays / 365).floor();
+      return years == 1 ? 'há 1 ano' : 'há $years anos';
+    } else if (diff.inDays > 30) {
+      final months = (diff.inDays / 30).floor();
+      return months == 1 ? 'há 1 mês' : 'há $months meses';
+    } else if (diff.inDays > 0) {
+      return diff.inDays == 1 ? 'há 1 dia' : 'há ${diff.inDays} dias';
+    } else if (diff.inHours > 0) {
+      return diff.inHours == 1 ? 'há 1 hora' : 'há ${diff.inHours} horas';
+    } else if (diff.inMinutes > 0) {
+      return diff.inMinutes == 1 ? 'há 1 minuto' : 'há ${diff.inMinutes} minutos';
+    }
+    return 'agora mesmo';
+  }
+
   static String? _normalizeImageUrl(dynamic value) {
     if (value == null) return null;
     String path = value.toString().trim();

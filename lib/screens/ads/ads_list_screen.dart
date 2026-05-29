@@ -24,15 +24,20 @@ class AdsListScreen extends StatefulWidget {
 
 class _AdsListScreenState extends State<AdsListScreen> {
   final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
   String? _selectedCondition;
   double? _minPrice;
   double? _maxPrice;
   String? _selectedCity;
   String _sortBy = 'recent';
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.searchQuery != null) {
+      _searchController.text = widget.searchQuery!;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchAds();
     });
@@ -46,7 +51,6 @@ class _AdsListScreenState extends State<AdsListScreen> {
   }
 
   Future<bool> _onWillPop() async {
-    // Force home reload when going back
     if (Navigator.canPop(context)) {
       Navigator.pop(context, true);
     }
@@ -56,11 +60,13 @@ class _AdsListScreenState extends State<AdsListScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _fetchAds() async {
     final adsProvider = Provider.of<AdsProvider>(context, listen: false);
+    final searchText = _searchController.text.trim();
     
     await adsProvider.fetchAds(
       categoryId: widget.categoryId,
@@ -68,21 +74,24 @@ class _AdsListScreenState extends State<AdsListScreen> {
       minPrice: _minPrice,
       maxPrice: _maxPrice,
       city: _selectedCity,
-      search: widget.searchQuery,
-      refresh: true, // Force refresh to get filtered results
+      search: searchText.isNotEmpty ? searchText : null,
+      sort: _sortBy,
+      refresh: true,
     );
   }
 
   Future<void> _loadMore() async {
     final adsProvider = Provider.of<AdsProvider>(context, listen: false);
     if (!adsProvider.isLoading && adsProvider.hasMore) {
+      final searchText = _searchController.text.trim();
       await adsProvider.loadMore(
         categoryId: widget.categoryId,
         condition: _selectedCondition,
         minPrice: _minPrice,
         maxPrice: _maxPrice,
         city: _selectedCity,
-        search: widget.searchQuery,
+        search: searchText.isNotEmpty ? searchText : null,
+        sort: _sortBy,
       );
     }
   }
@@ -277,24 +286,46 @@ class _AdsListScreenState extends State<AdsListScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-        title: Text(
-          widget.searchQuery != null 
-            ? 'Busca: ${widget.searchQuery}'
-            : (widget.categoryName ?? 'Anúncios'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+          title: Container(
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _searchController,
+              autofocus: widget.searchQuery != null && widget.searchQuery!.isNotEmpty,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+              decoration: InputDecoration(
+                hintText: 'Buscar em ${widget.categoryName ?? 'todos'}...',
+                hintStyle: const TextStyle(color: Colors.white70, fontSize: 15),
+                prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.white70, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          _fetchAds();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              ),
+              onSubmitted: (_) => _fetchAds(),
+              onChanged: (_) => setState(() {}),
+            ),
           ),
+          backgroundColor: AppColors.primary,
+          iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.filter_list, color: Colors.white),
+              onPressed: _showFilters,
+            ),
+          ],
         ),
-        backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilters,
-          ),
-        ],
-      ),
       body: Consumer<AdsProvider>(
         builder: (context, adsProvider, child) {
           if (adsProvider.isLoading && adsProvider.ads.isEmpty) {

@@ -734,44 +734,20 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               TextField(
                 controller: _searchController,
-                onSubmitted: (_) {
-                  final searchText = _searchController.text.trim();
-                  if (searchText.isNotEmpty) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AdsListScreen(
-                          categoryId: null, // Search shows all ads
-                          categoryName: null,
-                          searchQuery: searchText,
-                        ),
-                      ),
-                    );
-                  }
+                readOnly: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdsListScreen(),
+                    ),
+                  );
                 },
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Buscar anúncios...',
                   hintStyle: const TextStyle(color: Colors.white70),
                   prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                  suffixIcon: IconButton(
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.tune, color: Colors.white70),
-                        if (_hasActiveFilters)
-                          const Positioned(
-                            right: -2,
-                            top: -2,
-                            child: CircleAvatar(
-                              radius: 4,
-                              backgroundColor: AppColors.accent,
-                            ),
-                          ),
-                      ],
-                    ),
-                    onPressed: _openFiltersSheet,
-                  ),
                   filled: true,
                   fillColor: Colors.white.withOpacity(0.15),
                   border: OutlineInputBorder(
