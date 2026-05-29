@@ -510,9 +510,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text('Aplicar filtros',
+                      child: const Text('Aplicar filtros'),
                     ),
                   ),
+                ),
                   const SizedBox(height: 12),
                 ],
               );
