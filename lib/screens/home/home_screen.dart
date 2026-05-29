@@ -513,7 +513,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       child: const Text('Aplicar filtros'),
                     ),
                   ),
-                ),
                   const SizedBox(height: 12),
                 ],
               );

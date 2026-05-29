@@ -436,7 +436,8 @@ class _AdsListScreenState extends State<AdsListScreen> {
         );
       },
     ),
-  );
+  ),
+);
 }
 
   Widget _buildFilterChip(String label, String? value, String? currentValue) {
