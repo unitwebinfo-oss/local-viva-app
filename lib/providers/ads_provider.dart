@@ -47,8 +47,8 @@ class AdsProvider with ChangeNotifier {
         queryParams['q'] = search;
       }
       if (categoryId != null) queryParams['category_id'] = categoryId.toString();
-      if (city != null) queryParams['city'] = city;
-      if (state != null) queryParams['state'] = state;
+      if (city != null) queryParams['cidade'] = city;
+      if (state != null) queryParams['estado'] = state;
       if (minPrice != null) queryParams['min_price'] = minPrice.toString();
       if (maxPrice != null) queryParams['max_price'] = maxPrice.toString();
       if (condition != null) queryParams['condition'] = condition;
