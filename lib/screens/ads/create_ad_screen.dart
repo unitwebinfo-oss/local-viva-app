@@ -12,6 +12,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../utils/storage_helper.dart';
 import '../../utils/theme.dart';
+import 'my_ads_screen.dart';
 
 class CreateAdScreen extends StatefulWidget {
   const CreateAdScreen({super.key});
@@ -334,7 +335,9 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
       if (mounted) {
         if (response['success'] == true) {
           _showSuccess('Anúncio criado com sucesso!');
-          Navigator.of(context).pop(true);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const MyAdsScreen()),
+          );
         } else {
           _showError(response['error'] ?? 'Erro ao criar anúncio');
         }
