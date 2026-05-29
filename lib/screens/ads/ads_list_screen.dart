@@ -584,12 +584,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
             child: GridView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.65,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
+              gridDelegate: _getResponsiveGridDelegate(),
               itemCount: adsProvider.ads.length + (adsProvider.hasMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == adsProvider.ads.length) {
@@ -620,5 +615,43 @@ class _AdsListScreenState extends State<AdsListScreen> {
       ),
       ),
     );
+  }
+
+  SliverGridDelegateWithFixedCrossAxisCount _getResponsiveGridDelegate() {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    if (screenWidth >= 1200) {
+      // Desktop - 6 columns
+      return const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 6,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.78,
+      );
+    } else if (screenWidth >= 900) {
+      // Large tablet - 4 columns
+      return const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.78,
+      );
+    } else if (screenWidth >= 600) {
+      // Small tablet - 3 columns
+      return const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.75,
+      );
+    } else {
+      // Mobile - 2 columns
+      return const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.72,
+      );
+    }
   }
 }
