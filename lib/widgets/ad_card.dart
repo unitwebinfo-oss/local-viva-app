@@ -56,18 +56,18 @@ class AdCard extends StatelessWidget {
                   child: imageUrl != null
                       ? CachedNetworkImage(
                           imageUrl: imageUrl,
-                          height: 170,
+                          height: 145,
                           width: double.infinity,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
-                            height: 170,
+                            height: 145,
                             color: Colors.grey[200],
                             child: const Center(
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
                           errorWidget: (context, url, error) => Container(
-                            height: 170,
+                            height: 145,
                             color: Colors.grey[200],
                             child: const Icon(
                               Icons.image_not_supported,
@@ -77,7 +77,7 @@ class AdCard extends StatelessWidget {
                           ),
                         )
                       : Container(
-                          height: 170,
+                          height: 145,
                           color: Colors.grey[200],
                           child: const Icon(
                             Icons.image,
@@ -171,7 +171,7 @@ class AdCard extends StatelessWidget {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,

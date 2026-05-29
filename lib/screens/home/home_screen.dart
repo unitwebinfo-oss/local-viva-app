@@ -1104,7 +1104,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 6,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.78,
+        mainAxisExtent: 255,
       );
     } else if (screenWidth >= 900) {
       // Large tablet - 4 columns
@@ -1112,7 +1112,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 4,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.78,
+        mainAxisExtent: 255,
       );
     } else if (screenWidth >= 600) {
       // Small tablet - 3 columns
@@ -1120,7 +1120,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 3,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.75,
+        mainAxisExtent: 255,
       );
     } else {
       // Mobile - 2 columns
@@ -1128,7 +1128,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.62,
+        mainAxisExtent: 260,
       );
     }
   }
