@@ -67,6 +67,12 @@ android {
         }
     }
 
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging false
+        }
+    }
+
     buildTypes {
         release {
             if (keystorePropertiesFile.exists()) {
