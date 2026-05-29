@@ -31,6 +31,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
   double? _minPrice;
   double? _maxPrice;
   String? _selectedCity;
+  String? _selectedState;
   String _sortBy = 'recent';
   bool _isSearching = false;
 
@@ -106,6 +107,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
       minPrice: _minPrice,
       maxPrice: _maxPrice,
       city: _selectedCity,
+      state: _selectedState,
       search: searchText.isNotEmpty ? searchText : null,
       sort: _sortBy,
       refresh: true,
@@ -122,6 +124,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
         minPrice: _minPrice,
         maxPrice: _maxPrice,
         city: _selectedCity,
+        state: _selectedState,
         search: searchText.isNotEmpty ? searchText : null,
         sort: _sortBy,
       );
@@ -276,6 +279,69 @@ class _AdsListScreenState extends State<AdsListScreen> {
               ),
               const SizedBox(height: 24),
               
+              // Estado
+              const Text(
+                'Estado',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              InputDecorator(
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String?>(
+                    value: _selectedState,
+                    isExpanded: true,
+                    hint: const Text('Todos os estados'),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('Todos os estados'),
+                      ),
+                      ...['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+                          .map((uf) => DropdownMenuItem<String?>(
+                                value: uf,
+                                child: Text(uf),
+                              )),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedState = value;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Cidade
+              const Text(
+                'Cidade ou bairro',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Digite a cidade',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCity = value.isNotEmpty ? value : null;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
               // Price range
               const Text(
                 'Faixa de Preço',

@@ -310,12 +310,47 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     ],
                   ),
                   const SizedBox(height: 12),
+                  InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Estado',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: _selectedState,
+                        isExpanded: true,
+                        hint: const Text('Todos os estados'),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Todos os estados'),
+                          ),
+                          ...['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+                              .map((uf) => DropdownMenuItem<String?>(
+                                    value: uf,
+                                    child: Text(uf),
+                                  )),
+                        ],
+                        onChanged: (value) {
+                          setModalState(() {
+                            _selectedState = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: _locationController,
                     decoration: const InputDecoration(
-                      labelText: 'Localização (Cidade, UF)',
+                      labelText: 'Cidade ou bairro',
                       border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.location_city_outlined),
                     ),
+                    onChanged: (value) {
+                      _selectedCity = value.isNotEmpty ? value : null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   InputDecorator(
