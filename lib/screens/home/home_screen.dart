@@ -498,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                           _maxPrice = maxPriceCtrl.text.isNotEmpty
                               ? double.tryParse(maxPriceCtrl.text)
                               : null;
-                          _parseLocationInput(_locationController.text);
+                          _selectedCity = _locationController.text.isNotEmpty ? _locationController.text : null;
                           // Use subcategory if selected, otherwise main category
                           _selectedCategoryId = _selectedSubcategoryId ?? _selectedMainCategoryId;
                         });
