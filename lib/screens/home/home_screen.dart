@@ -273,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             bottom: MediaQuery.of(context).viewInsets.bottom,
             left: 16,
             right: 16,
-            top: 24,
+            top: 16,
           ),
           child: StatefulBuilder(
             builder: (context, setModalState) {
@@ -309,9 +309,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   InputDecorator(
                     decoration: const InputDecoration(
+                      isDense: true,
                       labelText: 'Estado',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.location_on_outlined),
@@ -340,10 +341,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _locationController,
                     decoration: const InputDecoration(
+                      isDense: true,
                       labelText: 'Cidade ou bairro',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.location_city_outlined),
@@ -352,9 +354,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       _selectedCity = value.isNotEmpty ? value : null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   InputDecorator(
                     decoration: const InputDecoration(
+                      isDense: true,
                       labelText: 'Categoria Principal',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.category_outlined),
@@ -397,9 +400,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     ),
                   ),
                   if (_subcategories.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     InputDecorator(
                       decoration: const InputDecoration(
+                        isDense: true,
                         labelText: 'Subcategoria',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.subdirectory_arrow_right),
@@ -430,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -438,6 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                           controller: minPriceCtrl,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
+                            isDense: true,
                             labelText: 'Preço mínimo',
                             border: OutlineInputBorder(),
                           ),
@@ -449,6 +454,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                           controller: maxPriceCtrl,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
+                            isDense: true,
                             labelText: 'Preço máximo',
                             border: OutlineInputBorder(),
                           ),
@@ -456,9 +462,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   InputDecorator(
                     decoration: const InputDecoration(
+                      isDense: true,
                       labelText: 'Condição',
                       border: OutlineInputBorder(),
                     ),
@@ -479,7 +486,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -501,9 +508,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text('Aplicar filtros'),
+                      child: const Text('Aplicar filtros',
                     ),
                   ),
                   const SizedBox(height: 12),

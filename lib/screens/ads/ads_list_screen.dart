@@ -150,29 +150,31 @@ class _AdsListScreenState extends State<AdsListScreen> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Filtros',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Filtros',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                  const SizedBox(height: 16),
               
               // Category filter
               if (_allCategories.isNotEmpty) ...[
@@ -209,7 +211,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
                             ),
                       ],
                       onChanged: (value) {
-                        setState(() {
+                        setModalState(() {
                           _selectedMainCategoryId = value;
                           _selectedSubcategoryId = null;
                           if (value != null) {
@@ -249,7 +251,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
                           ),
                         ],
                         onChanged: (value) {
-                          setState(() {
+                          setModalState(() {
                             _selectedSubcategoryId = value;
                           });
                         },
@@ -257,9 +259,9 @@ class _AdsListScreenState extends State<AdsListScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
               ],
-              
+
               // Condition filter
               const Text(
                 'Condição',
@@ -277,17 +279,17 @@ class _AdsListScreenState extends State<AdsListScreen> {
                   _buildFilterChip('Usado', 'used', _selectedCondition),
                 ],
               ),
-              const SizedBox(height: 24),
-              
+              const SizedBox(height: 16),
+
               // Estado
               const Text(
                 'Estado',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               InputDecorator(
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
@@ -310,24 +312,24 @@ class _AdsListScreenState extends State<AdsListScreen> {
                               )),
                     ],
                     onChanged: (value) {
-                      setState(() {
+                      setModalState(() {
                         _selectedState = value;
                       });
                     },
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Cidade
               const Text(
                 'Cidade ou bairro',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               TextField(
                 decoration: const InputDecoration(
                   hintText: 'Digite a cidade',
@@ -335,12 +337,12 @@ class _AdsListScreenState extends State<AdsListScreen> {
                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 onChanged: (value) {
-                  setState(() {
+                  setModalState(() {
                     _selectedCity = value.isNotEmpty ? value : null;
                   });
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Price range
               const Text(
@@ -382,8 +384,8 @@ class _AdsListScreenState extends State<AdsListScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              
+              const SizedBox(height: 16),
+
               // Sort by
               const Text(
                 'Ordenar por',
@@ -392,7 +394,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 children: [
@@ -401,7 +403,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
                   _buildFilterChip('Maior preço', 'price_desc', _sortBy),
                 ],
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               
               // Apply button
               SizedBox(
@@ -415,7 +417,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -423,7 +425,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
                   child: const Text(
                     'Aplicar Filtros',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
