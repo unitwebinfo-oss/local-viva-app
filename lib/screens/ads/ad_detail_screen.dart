@@ -125,13 +125,38 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   Future<void> _launchWhatsApp() async {
     final phoneNumber = _ad?.phone ?? _ad?.sellerPhone;
     if (phoneNumber == null || phoneNumber.isEmpty) return;
-    
+
     final phone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
     final message = Uri.encodeComponent('Olá, tenho interesse no anúncio: ${_ad!.title}');
-    final url = Uri.parse('https://wa.me/55$phone?text=$message');
-    
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+
+    // Try https://wa.me first (works on web and most devices)
+    final waMeUrl = Uri.parse('https://wa.me/55$phone?text=$message');
+    try {
+      final opened = await launchUrl(
+        waMeUrl,
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) return;
+    } catch (_) {}
+
+    // Fallback: try whatsapp:// scheme directly
+    final whatsappUrl = Uri.parse('whatsapp://send?phone=55$phone&text=$message');
+    try {
+      final opened = await launchUrl(
+        whatsappUrl,
+        mode: LaunchMode.externalNonBrowserApplication,
+      );
+      if (opened) return;
+    } catch (_) {}
+
+    // Last resort: copy phone to clipboard and show snackbar
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível abrir o WhatsApp. Verifique se o app está instalado.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
   }
 

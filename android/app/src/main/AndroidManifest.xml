@@ -20,6 +20,22 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"
         tools:node="remove" />
 
+    <!-- Required for url_launcher to check and open external apps on Android 11+ -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="whatsapp" />
+        </intent>
+    </queries>
+
     <application
         android:label="Local Viva"
         android:name="${applicationName}"
