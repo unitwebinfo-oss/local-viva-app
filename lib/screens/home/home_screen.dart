@@ -92,6 +92,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   void didPopNext() {
     // Reload banner randomly when returning to home
     _loadHomeBanner();
+    // Reset filters and reload ads to ensure home shows unfiltered content
+    _forceHomeReload();
   }
 
   
@@ -1102,7 +1104,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 6,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.78,
       );
     } else if (screenWidth >= 900) {
       // Large tablet - 4 columns
@@ -1110,7 +1112,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 4,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.78,
       );
     } else if (screenWidth >= 600) {
       // Small tablet - 3 columns
@@ -1118,7 +1120,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 3,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.70,
+        childAspectRatio: 0.75,
       );
     } else {
       // Mobile - 2 columns
@@ -1126,7 +1128,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.65,
+        childAspectRatio: 0.72,
       );
     }
   }
