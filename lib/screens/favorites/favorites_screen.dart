@@ -4,7 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../utils/theme.dart';
 import '../../widgets/ad_card.dart';
-import '../../widgets/auth_prompt.dart';
+import '../../utils/auth_helpers.dart';
 import '../ads/ad_detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -34,6 +34,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final auth = context.watch<AuthProvider>();
 
     if (!auth.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showAuthModal(context, featureName: 'Favoritos');
+      });
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -47,11 +50,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           foregroundColor: Colors.white,
           automaticallyImplyLeading: true,
         ),
-        body: AuthPrompt(
-          title: 'Entre para acessar seus favoritos',
-          description:
-              'Salve, organize e revisite todos os anúncios que você curtiu.',
-          onTap: () => Navigator.of(context).pushReplacementNamed('/login'),
+        body: const _EmptyState(
+          title: 'Entre para ver seus favoritos',
+          description: 'Salve os anúncios que você mais gosta para acessá-los depois.',
         ),
       );
     }

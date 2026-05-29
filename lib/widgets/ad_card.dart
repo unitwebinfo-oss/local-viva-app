@@ -30,19 +30,19 @@ class AdCard extends StatelessWidget {
     final bool isBoosted = ad.isBoosted;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: isBoosted ? 5 : 1,
+      margin: EdgeInsets.zero,
+      elevation: isBoosted ? 3 : 1,
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.grey.shade200,
           width: 1,
         ),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -51,65 +51,66 @@ class AdCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(18),
+                    top: Radius.circular(12),
                   ),
                   child: imageUrl != null
                       ? CachedNetworkImage(
                           imageUrl: imageUrl,
-                          height: 190,
+                          height: 170,
                           width: double.infinity,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
-                            height: 190,
+                            height: 170,
                             color: Colors.grey[200],
                             child: const Center(
-                              child: CircularProgressIndicator(),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
                           errorWidget: (context, url, error) => Container(
-                            height: 190,
+                            height: 170,
                             color: Colors.grey[200],
                             child: const Icon(
                               Icons.image_not_supported,
-                              size: 48,
+                              size: 40,
                               color: Colors.grey,
                             ),
                           ),
                         )
                       : Container(
-                          height: 190,
+                          height: 170,
                           color: Colors.grey[200],
                           child: const Icon(
                             Icons.image,
-                            size: 48,
+                            size: 40,
                             color: Colors.grey,
                           ),
                         ),
                 ),
                 if (isBoosted && ad.boostLabel.isNotEmpty)
                   Positioned(
-                    top: 12,
-                    left: 12,
+                    top: 8,
+                    left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.45),
-                        borderRadius: BorderRadius.circular(999),
+                        color: Colors.black.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.local_fire_department,
-                              size: 16, color: Colors.white),
-                          const SizedBox(width: 6),
+                              size: 12, color: Colors.white),
+                          const SizedBox(width: 4),
                           Text(
                             ad.boostLabel,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -118,18 +119,17 @@ class AdCard extends StatelessWidget {
                   ),
                 // Buttons overlay
                 Positioned(
-                  top: 8,
-                  right: 8,
+                  top: 6,
+                  right: 6,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Edit button (only when onEdit is provided)
                       if (onEdit != null)
                         Container(
-                          margin: const EdgeInsets.only(right: 8),
+                          margin: const EdgeInsets.only(right: 6),
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
+                            color: Colors.black.withOpacity(0.5),
                             shape: BoxShape.circle,
                           ),
                           child: GestureDetector(
@@ -137,11 +137,10 @@ class AdCard extends StatelessWidget {
                             child: const Icon(
                               Icons.edit,
                               color: Colors.white,
-                              size: 20,
+                              size: 18,
                             ),
                           ),
                         ),
-                      // Favorite button
                       if (showFavorite)
                         Consumer<FavoritesProvider>(
                           builder: (context, favProvider, child) {
@@ -149,7 +148,7 @@ class AdCard extends StatelessWidget {
                             return Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
+                                color: Colors.black.withOpacity(0.5),
                                 shape: BoxShape.circle,
                               ),
                               child: GestureDetector(
@@ -160,7 +159,7 @@ class AdCard extends StatelessWidget {
                                 child: Icon(
                                   isFavorited ? Icons.favorite : Icons.favorite_border,
                                   color: isFavorited ? Colors.red : Colors.white,
-                                  size: 20,
+                                  size: 18,
                                 ),
                               ),
                             );
@@ -171,15 +170,8 @@ class AdCard extends StatelessWidget {
                 ),
               ],
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(18),
-                ),
-              ),
+            Padding(
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -187,9 +179,10 @@ class AdCard extends StatelessWidget {
                   Text(
                     ad.title.toLowerCase().capitalizeFirst(),
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
+                      height: 1.3,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -198,24 +191,27 @@ class AdCard extends StatelessWidget {
                   Text(
                     ad.formattedPrice,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primaryDark,
+                      color: AppColors.primary,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       const Icon(
                         Icons.location_on_outlined,
-                        size: 14,
+                        size: 12,
                         color: AppColors.textSecondary,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 2),
                       Expanded(
                         child: Text(
                           ad.location,
-                          style: AppTextStyles.bodySmall,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

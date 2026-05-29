@@ -8,6 +8,7 @@ import '../../utils/storage_helper.dart';
 import '../../models/ad_model.dart';
 import '../../widgets/ad_card.dart';
 import '../../services/api_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/boost_service.dart';
 import 'boost_screen.dart';
 import '../../config/api_config.dart';
@@ -406,7 +407,7 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.of(context).pushNamed('/create-ad');
+              Navigator.of(context).pushNamed('/create_ad');
             },
             icon: const Icon(Icons.add),
             label: const Text('Criar Anúncio'),
@@ -425,11 +426,12 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            Icon(Icons.more_horiz, color: AppColors.primary, size: 28),
+            const Icon(Icons.rocket_launch, color: AppColors.primary, size: 28),
             const SizedBox(width: 12),
-            const Text('Mais opções'),
+            const Text('Destacar Anúncio'),
           ],
         ),
         content: Column(
@@ -437,12 +439,12 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Acesse o painel completo',
+              'Dê mais visibilidade ao seu anúncio',
               style: AppTextStyles.heading3,
             ),
             const SizedBox(height: 12),
             Text(
-              'Para acessar todas as funcionalidades disponíveis para seu anúncio, acesse nosso site e utilize as ferramentas completas.',
+              'Para turbinar seu anúncio e aparecer no topo dos resultados, acesse nosso site e escolha um dos planos de destaque.',
               style: AppTextStyles.body,
             ),
             const SizedBox(height: 16),
@@ -460,9 +462,7 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
                   Expanded(
                     child: Text(
                       'Você será redirecionado para o site Local Viva',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primary,
-                      ),
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary),
                     ),
                   ),
                 ],
@@ -475,12 +475,10 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancelar'),
           ),
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: () async {
               Navigator.of(context).pop();
-              
-              // Redirecionar para o site
-              final Uri url = Uri.parse('https://localviva.com.br/entrar');
+              final Uri url = Uri.parse('https://localviva.com.br/pacotes');
               if (await canLaunchUrl(url)) {
                 await launchUrl(url, mode: LaunchMode.externalApplication);
               } else {
@@ -494,11 +492,12 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
                 }
               }
             },
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('Ver Planos'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Acessar Site'),
           ),
         ],
       ),
@@ -661,6 +660,7 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
       );
     }
   }
+
 }
 
 class _MyAdCard extends StatelessWidget {
@@ -679,6 +679,22 @@ class _MyAdCard extends StatelessWidget {
     this.onReactivate,
     this.onDelete,
   });
+
+  Widget _buildActionChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onTap,
+  }) {
+    return ActionChip(
+      avatar: Icon(icon, size: 16, color: color),
+      label: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+      backgroundColor: color.withOpacity(0.1),
+      side: BorderSide(color: color.withOpacity(0.3)),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      onPressed: onTap,
+    );
+  }
 
   Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
@@ -702,11 +718,12 @@ class _MyAdCard extends StatelessWidget {
     final bool isBoosted = ad.boostType != 'none' && ad.boostType != null;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
+      margin: EdgeInsets.zero,
+      elevation: 1,
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
       ),
       child: InkWell(
         onTap: onTap,
@@ -721,70 +738,40 @@ class _MyAdCard extends StatelessWidget {
                     top: Radius.circular(12),
                   ),
                   child: imageUrl != null
-                      ? Image.network(
-                          imageUrl,
-                          height: 180,
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          height: 160,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 180,
-                              color: AppColors.surface,
-                              child: const Icon(
-                                Icons.image_not_supported,
-                                size: 50,
-                                color: AppColors.textSecondary,
-                              ),
-                            );
-                          },
+                          placeholder: (c, u) => Container(
+                            height: 160,
+                            color: Colors.grey[200],
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
+                          errorWidget: (c, u, e) => Container(
+                            height: 160,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                          ),
                         )
                       : Container(
-                          height: 180,
-                          color: AppColors.surface,
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 50,
-                            color: AppColors.textSecondary,
-                          ),
+                          height: 160,
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.image, size: 48, color: Colors.grey),
                         ),
                 ),
-                if (isBoosted)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'Turbinado',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                // Status badge top-right
                 Positioned(
-                  top: 12,
-                  right: 12,
+                  top: 10,
+                  right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(ad.status),
-                      borderRadius: BorderRadius.circular(12),
+                      color: _getStatusColor(ad.status).withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      ad.status?.toUpperCase() ?? 'UNKNOWN',
+                      (ad.status ?? 'unknown').toUpperCase(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -793,212 +780,135 @@ class _MyAdCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (ad.isFavorited)
+                if (isBoosted)
                   Positioned(
-                    bottom: 12,
-                    right: 12,
+                    top: 10,
+                    left: 10,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_fire_department, size: 12, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'Destaque',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         ],
-                      ),
-                      child: const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: 20,
                       ),
                     ),
                   ),
               ],
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    ad.title ?? 'Sem título',
+                    ad.title,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Text(
+                    ad.formattedPrice,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
                     children: [
+                      const Icon(Icons.visibility_outlined, size: 12, color: AppColors.textSecondary),
+                      const SizedBox(width: 2),
                       Text(
-                        ad.formattedPrice ?? 'R\$ 0,00',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                        '${ad.views}',
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
                       ),
-                      Text(
-                        '${ad.views ?? 0} visualizações',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
+                      const SizedBox(width: 8),
+                      const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textSecondary),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          ad.location,
+                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  if (ad.city != null || ad.state != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_outlined,
-                                size: 16,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  '${ad.city ?? ''}, ${ad.state ?? ''}',
-                                  style: const TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (ad.phone != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.phone_outlined,
-                                    size: 16,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    ad.phone!,
-                                    style: const TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   if (ad.status == 'expired')
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
                         color: Colors.orange.shade50,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.orange.shade200),
                       ),
-                      child: Column(
+                      child: Row(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Anúncio Expirado', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text('Reativações: ${(ad.categoryReactivationLimit ?? 3) - (ad.freeReactivationsUsed ?? 0)}/${ad.categoryReactivationLimit ?? 3}', style: const TextStyle(fontSize: 12)),
-                                                                  ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: (ad.categoryReactivationLimit == 0) ? null : onReactivate,
-                              icon: const Icon(Icons.refresh, size: 16),
-                              label: Text(
-                                ad.categoryReactivationLimit == 0 
-                                  ? '♻️ Sem Reativações Grátis' 
-                                  : '♻️ Reativar Grátis'
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: ad.categoryReactivationLimit == 0 
-                                  ? Colors.grey 
-                                  : Colors.orange,
-                                foregroundColor: Colors.white,
-                              ),
+                          const Icon(Icons.info_outline, size: 14, color: Colors.orange),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Expirado - Reativações: ${(ad.categoryReactivationLimit ?? 3) - ad.freeReactivationsUsed}/${ad.categoryReactivationLimit ?? 3}',
+                              style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.w500),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  const SizedBox(height: 12),
-                  Row(
+                  // Action chips
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onEdit,
-                          child: const Text('Editar'),
-                        ),
+                      _buildActionChip(
+                        icon: Icons.edit_outlined,
+                        label: 'Editar',
+                        color: AppColors.primary,
+                        onTap: onEdit,
                       ),
-                      const SizedBox(width: 8),
+                      if (ad.status == 'expired' && (ad.categoryReactivationLimit ?? 0) > 0)
+                        _buildActionChip(
+                          icon: Icons.refresh,
+                          label: 'Reativar',
+                          color: Colors.orange,
+                          onTap: onReactivate,
+                        ),
                       if (!isBoosted)
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: onBoost,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('⋯ Mais opções'),
-                          ),
+                        _buildActionChip(
+                          icon: Icons.rocket_launch_outlined,
+                          label: 'Destacar',
+                          color: AppColors.primary,
+                          onTap: onBoost,
                         ),
-                      if (isBoosted)
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('🚀 Já Turbinado'),
-                          ),
-                        ),
+                      _buildActionChip(
+                        icon: Icons.delete_outline,
+                        label: 'Excluir',
+                        color: Colors.red,
+                        onTap: onDelete,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  if (onDelete != null)
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: onDelete,
-                        icon: const Icon(Icons.delete, size: 16),
-                        label: const Text('Excluir Anúncio'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),

@@ -119,14 +119,18 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (response['success'] == true) {
-        await StorageHelper.saveToken(response['token']);
-        _user = UserModel.fromJson(response['user']);
+        // Registration successful - user needs to verify email before login
+        // Token is not returned until email is verified
+        if (response['token'] != null) {
+          await StorageHelper.saveToken(response['token']);
+          _user = UserModel.fromJson(response['user']);
+        }
         _isLoading = false;
         notifyListeners();
         return true;
       }
       
-      _error = 'Erro ao criar conta';
+      _error = response['error']?.toString() ?? 'Erro ao criar conta';
       _isLoading = false;
       notifyListeners();
       return false;

@@ -119,6 +119,42 @@ class AdsProvider with ChangeNotifier {
     );
   }
 
+  Future<void> fetchFeaturedAds({int limit = 10}) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await ApiService.get('${ApiConfig.ads}?boosted=1&limit=$limit&page=1');
+
+      if (kDebugMode) {
+        print('Featured ads response: $response');
+      }
+
+      if (response['success'] == true) {
+        final featuredAds = (response['ads'] as List)
+            .map((json) => AdModel.fromJson(json))
+            .toList();
+
+        // Merge featured ads into the main list without duplicates
+        final existingIds = _ads.map((a) => a.id).toSet();
+        for (final ad in featuredAds) {
+          if (!existingIds.contains(ad.id)) {
+            _ads.insert(0, ad);
+            existingIds.add(ad.id);
+          }
+        }
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<AdModel?> getAdById(int id) async {
     try {
       final queryParams = <String, String>{};

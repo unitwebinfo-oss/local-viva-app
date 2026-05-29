@@ -11,6 +11,7 @@ import '../../models/ad_model.dart';
 import '../../utils/theme.dart';
 import '../../utils/string_extension.dart';
 import '../../config/api_config.dart';
+import '../../services/api_service.dart';
 import '../../services/banner_service.dart';
 import '../../widgets/banner_widget.dart';
 
@@ -29,6 +30,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   Map<String, dynamic>? _adDetailBanner;
   final PageController _pageController = PageController();
   int _currentImageIndex = 0;
+
+  List<AdModel> _similarAds = [];
+  bool _isLoadingSimilar = false;
 
   @override
   void initState() {
@@ -61,7 +65,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   Future<void> _loadAd() async {
     final adsProvider = Provider.of<AdsProvider>(context, listen: false);
     final ad = await adsProvider.getAdById(widget.adId);
-    
+
     if (mounted) {
       setState(() {
         _ad = ad;
@@ -69,6 +73,34 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       });
       _preloadImages();
       _loadAdDetailBanner();
+      if (ad != null && ad.categoryId != null) {
+        _loadSimilarAds(ad.categoryId!);
+      }
+    }
+  }
+
+  Future<void> _loadSimilarAds(int categoryId) async {
+    if (_isLoadingSimilar) return;
+    setState(() => _isLoadingSimilar = true);
+
+    try {
+      final response = await ApiService.get('${ApiConfig.ads}?category_id=$categoryId&limit=20');
+
+      if (mounted && response['success'] == true) {
+        final all = (response['ads'] as List)
+            .map((json) => AdModel.fromJson(json))
+            .where((a) => a.id != widget.adId)
+            .take(8)
+            .toList();
+        setState(() {
+          _similarAds = all;
+          _isLoadingSimilar = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingSimilar = false);
+      }
     }
   }
 
@@ -148,25 +180,40 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.share_outlined, color: Colors.white),
-                onPressed: _shareAd,
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.share_outlined, color: Colors.white),
+                  onPressed: _shareAd,
+                ),
               ),
               Consumer<FavoritesProvider>(
                 builder: (context, favProvider, child) {
                   final isFavorited = favProvider.isFavorited(_ad!.id);
-                  return IconButton(
-                    icon: Icon(
-                      isFavorited ? Icons.favorite : Icons.favorite_border,
-                      color: Colors.white,
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      shape: BoxShape.circle,
                     ),
-                    onPressed: () async {
-                      final auth = Provider.of<AuthProvider>(context, listen: false);
-                      await favProvider.toggleFavorite(_ad!.id, userId: auth.user?.id);
-                    },
+                    child: IconButton(
+                      icon: Icon(
+                        isFavorited ? Icons.favorite : Icons.favorite_border,
+                        color: Colors.white,
+                      ),
+                      onPressed: () async {
+                        final auth = Provider.of<AuthProvider>(context, listen: false);
+                        await favProvider.toggleFavorite(_ad!.id, userId: auth.user?.id);
+                      },
+                    ),
                   );
                 },
               ),
+              const SizedBox(width: 4),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -208,6 +255,25 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                             color: Colors.grey,
                           ),
                         ),
+                  // Dark gradient at top for button visibility
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 100,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.5),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   // Image counter
                   if (_ad!.images.length > 1)
                     Positioned(
@@ -263,8 +329,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _ad!.title.toLowerCase().capitalizeFirst(),
-                    style: AppTextStyles.heading2,
+                    _ad!.title,
+                    style: AppTextStyles.heading3,
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -330,10 +396,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _ad!.description,
+                    _ad!.description.toSentenceCase(),
                     style: const TextStyle(
                       fontSize: 15,
-                      color: AppColors.textPrimary,
+                      color: Colors.black,
                       height: 1.5,
                     ),
                   ),
@@ -385,6 +451,100 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
+                  // Similar Ads Carousel
+                  if (_similarAds.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Anúncios similares',
+                      style: AppTextStyles.heading3,
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 240,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _similarAds.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          final ad = _similarAds[index];
+                          final imageUrl = ad.primaryImageUrl;
+                          return SizedBox(
+                            width: 150,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AdDetailScreen(adId: ad.id),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AspectRatio(
+                                      aspectRatio: 1,
+                                      child: imageUrl != null && imageUrl.isNotEmpty
+                                          ? CachedNetworkImage(
+                                              imageUrl: imageUrl,
+                                              fit: BoxFit.cover,
+                                              placeholder: (context, url) => Container(
+                                                color: AppColors.border,
+                                              ),
+                                              errorWidget: (context, url, error) => Container(
+                                                color: AppColors.border,
+                                                child: const Icon(Icons.image, color: AppColors.textSecondary),
+                                              ),
+                                            )
+                                          : Container(
+                                              color: AppColors.border,
+                                              child: const Icon(Icons.image, color: AppColors.textSecondary),
+                                            ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            ad.title,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            ad.formattedPrice,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
                   // Ad Detail Banner - Responsive and clickable (always visible)
                   if (_adDetailBanner != null)
                     BannerWidget(

@@ -17,6 +17,7 @@ class AdModel {
   final String? sellerName;
   final String? sellerPhone;
   final int views;
+  final int whatsappClicks;
   final String? createdAt;
   final bool isFavorited;
   final String? favoritedAt;
@@ -48,6 +49,7 @@ class AdModel {
     this.sellerName,
     this.sellerPhone,
     required this.views,
+    this.whatsappClicks = 0,
     required this.createdAt,
     this.isFavorited = false,
     this.favoritedAt,
@@ -93,6 +95,7 @@ class AdModel {
       sellerName: json['seller_name'],
       sellerPhone: json['seller_phone'],
       views: json['views'] ?? 0,
+      whatsappClicks: json['whatsapp_clicks'] ?? 0,
       createdAt: json['created_at'],
       isFavorited: json['is_favorited'] ?? false,
       boostType: (json['boost_type'] ?? 'none').toString(),

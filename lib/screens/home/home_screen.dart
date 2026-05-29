@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/ad_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ads_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../utils/theme.dart';
+import '../../utils/string_extension.dart';
 import '../../widgets/ad_card.dart';
 import '../../widgets/site_webview.dart';
 import '../../widgets/auth_prompt.dart';
 import '../../widgets/banner_widget.dart';
+import '../../widgets/custom_drawer.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/brand_logo.dart';
 import '../../services/api_service.dart';
@@ -24,6 +28,8 @@ import '../messages/messages_screen.dart';
 import '../favorites/favorites_screen.dart';
 import '../ads/ads_list_screen.dart';
 import '../../widgets/category_card.dart';
+import '../../utils/auth_helpers.dart';
+import '../../main.dart' as main_app;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,17 +38,21 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   final _searchController = TextEditingController();
   final _locationController = TextEditingController();
   final _scrollController = ScrollController();
 
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _allCategories = [];
+  List<Map<String, dynamic>> _subcategories = [];
   bool _loadingCategories = false;
   bool _isLoadingMore = false;
   Map<String, dynamic>? _homeBanner;
 
   int? _selectedCategoryId;
+  int? _selectedMainCategoryId;
+  int? _selectedSubcategoryId;
   String? _selectedCondition;
   double? _minPrice;
   double? _maxPrice;
@@ -58,15 +68,39 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadConversations();
       _loadHomeBanner();
     });
-    
+
     // Add scroll listener for infinite scroll
     _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    main_app.routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    main_app.routeObserver.unsubscribe(this);
+    _searchController.dispose();
+    _locationController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Reload banner randomly when returning to home
+    _loadHomeBanner();
   }
 
   
   void _clearFilters() {
     setState(() {
       _selectedCategoryId = null;
+      _selectedMainCategoryId = null;
+      _selectedSubcategoryId = null;
+      _subcategories = [];
       _selectedCondition = null;
       _minPrice = null;
       _maxPrice = null;
@@ -82,6 +116,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Complete reset of home state
     setState(() {
       _selectedCategoryId = null;
+      _selectedMainCategoryId = null;
+      _selectedSubcategoryId = null;
+      _subcategories = [];
       _selectedCondition = null;
       _minPrice = null;
       _maxPrice = null;
@@ -97,14 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // Force refresh with loading indicator
     _fetchAds(refresh: true);
     _loadHomeBanner();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _locationController.dispose();
-    _scrollController.dispose();
-    super.dispose();
   }
 
   void _onScroll() {
@@ -143,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => AdsListScreen(
           categoryId: _selectedCategoryId,
           categoryName: _selectedCategoryId != null 
-            ? _categories.firstWhere((c) => c['id'] == _selectedCategoryId, orElse: () => {'name': 'Categoria'})['name']
+            ? _allCategories.firstWhere((c) => c['id'] == _selectedCategoryId, orElse: () => {'name': 'Categoria'})['name']
             : null,
         ),
       ),
@@ -182,22 +211,29 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final response = await ApiService.get(ApiConfig.categories);
       if (response['success'] == true) {
-        final List<Map<String, dynamic>> list = [];
+        final List<Map<String, dynamic>> allList = [];
+        final List<Map<String, dynamic>> mainList = [];
         
-        // Load only main categories (first level only)
         if (response['categories'] is List) {
           for (final node in response['categories']) {
-            list.add({
+            final cat = {
               'id': node['id'],
               'name': node['name'],
               'icon': node['icon'],
-            });
+              'parent_id': node['parent_id'],
+            };
+            allList.add(cat);
+            // Main categories have no parent (null or 0)
+            if (node['parent_id'] == null || node['parent_id'] == 0) {
+              mainList.add(cat);
+            }
           }
         }
 
         setState(() {
-          // Show only first 8 main categories
-          _categories = list.take(8).toList();
+          _allCategories = allList;
+          // Show only first 8 main categories on home carousel
+          _categories = mainList.take(8).toList();
         });
       }
     } catch (e) {
@@ -256,6 +292,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () {
                           setModalState(() {
                             _selectedCategoryId = null;
+                            _selectedMainCategoryId = null;
+                            _selectedSubcategoryId = null;
+                            _subcategories = [];
                             _selectedCondition = null;
                             _minPrice = null;
                             _maxPrice = null;
@@ -281,12 +320,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 16),
                   InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'Categoria',
+                      labelText: 'Categoria Principal',
                       border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.category_outlined),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int?>(
-                        value: _selectedCategoryId,
+                        value: _selectedMainCategoryId,
                         isExpanded: true,
                         hint: _loadingCategories
                             ? const Text('Carregando...')
@@ -296,21 +336,65 @@ class _HomeScreenState extends State<HomeScreen> {
                             value: null,
                             child: Text('Todas as categorias'),
                           ),
-                          ..._categories.map(
-                            (cat) => DropdownMenuItem<int?>(
-                              value: cat['id'] as int?,
-                              child: Text(cat['name'] as String),
-                            ),
-                          ),
+                          ..._allCategories
+                              .where((c) => c['parent_id'] == null || c['parent_id'] == 0)
+                              .map(
+                                (cat) => DropdownMenuItem<int?>(
+                                  value: cat['id'] as int?,
+                                  child: Text(cat['name'] as String),
+                                ),
+                              ),
                         ],
                         onChanged: (value) {
                           setModalState(() {
-                            _selectedCategoryId = value;
+                            _selectedMainCategoryId = value;
+                            _selectedSubcategoryId = null;
+                            if (value != null) {
+                              _subcategories = _allCategories
+                                  .where((c) => c['parent_id'] == value)
+                                  .toList();
+                            } else {
+                              _subcategories = [];
+                            }
                           });
                         },
                       ),
                     ),
                   ),
+                  if (_subcategories.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Subcategoria',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.subdirectory_arrow_right),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int?>(
+                          value: _selectedSubcategoryId,
+                          isExpanded: true,
+                          hint: const Text('Selecione uma subcategoria'),
+                          items: [
+                            const DropdownMenuItem<int?>(
+                              value: null,
+                              child: Text('Todas as subcategorias'),
+                            ),
+                            ..._subcategories.map(
+                              (cat) => DropdownMenuItem<int?>(
+                                value: cat['id'] as int?,
+                                child: Text(cat['name'] as String),
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setModalState(() {
+                              _selectedSubcategoryId = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -373,6 +457,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? double.tryParse(maxPriceCtrl.text)
                               : null;
                           _parseLocationInput(_locationController.text);
+                          // Use subcategory if selected, otherwise main category
+                          _selectedCategoryId = _selectedSubcategoryId ?? _selectedMainCategoryId;
                         });
                         _applyFilters();
                         Navigator.of(context).pop();
@@ -417,11 +503,16 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchAds();
   }
 
-  Future<void> _fetchAds({bool refresh = true}) {
+  Future<void> _fetchAds({bool refresh = true}) async {
     final adsProvider = Provider.of<AdsProvider>(context, listen: false);
     final searchText = _searchController.text.trim();
 
-    return adsProvider.fetchAds(
+    // Fetch featured ads first when refreshing home
+    if (refresh && searchText.isEmpty) {
+      await adsProvider.fetchFeaturedAds(limit: 10);
+    }
+
+    await adsProvider.fetchAds(
       refresh: refresh,
       categoryId: null, // Home always shows all ads
       city: _selectedCity,
@@ -453,7 +544,10 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        elevation: 0,
+        elevation: 2,
+        scrolledUnderElevation: 2,
+        shadowColor: Colors.black.withOpacity(0.15),
+        surfaceTintColor: Colors.transparent,
         title: const BrandLogo(height: 40),
         automaticallyImplyLeading: false,
         actions: [
@@ -467,11 +561,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const MessagesScreen(),
-                        ),
-                      );
+                      final auth = context.read<AuthProvider>();
+                      if (!auth.isAuthenticated) {
+                        showAuthModal(context, featureName: 'Mensagens');
+                      } else {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const MessagesScreen(),
+                          ),
+                        );
+                      }
                     },
                   ),
                   if (unreadCount > 0)
@@ -511,173 +610,20 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _buildHomeFeed(),
-      drawer: Drawer(
-        backgroundColor: Colors.white,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                gradient: AppColors.heroGradient,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const BrandLogo(height: 40),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Local Viva',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Text(
-                    'Menu',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Início'),
-              onTap: () {
-                Navigator.of(context).pop();
-                // Refresh home data
-                _fetchAds();
-                _loadHomeBanner();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.favorite),
-              title: const Text('Favoritos'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _navigateToScreen('Favoritos', 'favorites', auth);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.add_circle),
-              title: const Text('Anunciar'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _navigateToScreen('Anunciar', 'create_ad', auth);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.article),
-              title: const Text('Meus Anúncios'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _navigateToScreen('Meus Anúncios', 'my_ads', auth);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.chat),
-              title: const Text('Mensagens'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _navigateToScreen('Mensagens', 'messages', auth);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Perfil'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _navigateToScreen('Perfil', 'profile', auth);
-              },
-            ),
-            const Divider(),
-            if (!auth.isAuthenticated)
-              ListTile(
-                leading: const Icon(Icons.login, color: AppColors.primary),
-                title: const Text('Fazer Login'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pushNamed('/login');
-                },
-              ),
-            if (auth.isAuthenticated)
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text('Sair', style: TextStyle(color: Colors.red)),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await context.read<AuthProvider>().logout();
-                },
-              ),
-          ],
-        ),
-      ),
+      drawer: const CustomDrawer(),
     );
+  }
+
+  void _showAuthBottomSheet(String title) {
+    showAuthModal(context, featureName: title);
   }
 
   void _navigateToScreen(String title, String screenType, AuthProvider auth) async {
     // Only require auth for user-specific features
-    final requiresAuth = ['create_ad', 'my_ads', 'profile', 'messages'].contains(screenType);
+    final requiresAuth = ['create_ad', 'my_ads', 'profile', 'messages', 'favorites'].contains(screenType);
     
     if (requiresAuth && !auth.isAuthenticated) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        builder: (context) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.lock_outline,
-                size: 64,
-                color: AppColors.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Faça login para acessar $title',
-                style: AppTextStyles.heading2,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Entrando você consegue gerenciar anúncios, mensagens e muito mais.',
-                style: AppTextStyles.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context, rootNavigator: true).pushNamed('/login');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text('Fazer login'),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
-      );
+      _showAuthBottomSheet(title);
       return;
     }
 
@@ -713,6 +659,108 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildFeaturedCard(AdModel ad) {
+    final imageUrl = ad.primaryImageUrl ?? (ad.images.isNotEmpty ? ad.images.first : null);
+    return Container(
+      width: 180,
+      margin: const EdgeInsets.only(right: 12),
+      child: Card(
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => AdDetailScreen(adId: ad.id),
+              ),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: imageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            height: 140,
+                            width: 180,
+                            fit: BoxFit.cover,
+                            placeholder: (c, u) => Container(
+                              height: 140,
+                              color: Colors.grey[200],
+                              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            ),
+                            errorWidget: (c, u, e) => Container(
+                              height: 140,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.image, color: Colors.grey),
+                            ),
+                          )
+                        : Container(
+                            height: 140,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.image, color: Colors.grey),
+                          ),
+                  ),
+                  if (ad.isBoosted)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_fire_department, size: 12, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'Destaque',
+                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ad.title.toLowerCase().capitalizeFirst(),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ad.formattedPrice,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHomeFeed() {
     return Column(
       children: [
@@ -728,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -743,17 +791,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Buscar anúncios...',
-                  hintStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                  hintStyle: const TextStyle(color: Colors.white70, fontSize: 14),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
                   filled: true,
                   fillColor: Colors.white.withOpacity(0.15),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  isDense: true,
                 ),
               ),
             ],
@@ -763,6 +813,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: Consumer<AdsProvider>(
             builder: (context, adsProvider, child) {
+              final recentAds = adsProvider.ads.where((a) => !a.isBoosted).toList();
               return RefreshIndicator(
                 onRefresh: () async {
                   await _fetchAds();
@@ -785,13 +836,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        child: Row(
                           children: [
+                            const Icon(Icons.category, color: AppColors.primary, size: 22),
+                            const SizedBox(width: 8),
                             const Text(
                               'Categorias em destaque',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textPrimary,
                               ),
@@ -841,6 +893,65 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: SizedBox(height: 16),
                     ),
                   ],
+                  // Featured Ads carousel
+                  if (adsProvider.ads.where((a) => a.isBoosted).isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.local_fire_department, color: AppColors.primary, size: 22),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Anúncios em Destaque',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 260,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: adsProvider.ads.where((a) => a.isBoosted).length,
+                          itemBuilder: (context, index) {
+                            final featured = adsProvider.ads.where((a) => a.isBoosted).toList();
+                            final ad = featured[index];
+                            return _buildFeaturedCard(ad);
+                          },
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                  ],
+                  // Recent Ads title - exclude boosted ads already shown in carousel
+                  if (recentAds.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.schedule, color: AppColors.secondary, size: 22),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Chegaram Recentemente',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   // Ads list
                   if (adsProvider.isLoading && adsProvider.ads.isEmpty)
                     const SliverFillRemaining(
@@ -881,7 +992,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     )
-                  else if (adsProvider.ads.isEmpty)
+                  else if (recentAds.isEmpty)
                     const SliverFillRemaining(
                       child: Center(
                         child: Text('Nenhum anúncio encontrado'),
@@ -895,7 +1006,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
                             // Load more when reaching near the end
-                            if (index >= adsProvider.ads.length - 3 && 
+                            if (index >= recentAds.length - 3 && 
                                 !_isLoadingMore && 
                                 adsProvider.hasMore) {
                               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -905,7 +1016,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               });
                             }
                             
-                            if (index == adsProvider.ads.length && _isLoadingMore) {
+                            if (index == recentAds.length && _isLoadingMore) {
                               return const Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(16),
@@ -914,7 +1025,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             }
                             
-                            final ad = adsProvider.ads[index];
+                            final ad = recentAds[index];
                             return AdCard(
                               ad: ad,
                               onTap: () {
@@ -926,7 +1037,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             );
                           },
-                          childCount: adsProvider.ads.length + (_isLoadingMore ? 1 : 0),
+                          childCount: recentAds.length + (_isLoadingMore ? 1 : 0),
                         ),
                       ),
                     ),
@@ -948,32 +1059,32 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 6,
         crossAxisSpacing: 16,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.65,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.72,
       );
     } else if (screenWidth >= 900) {
       // Large tablet - 4 columns
       return const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         crossAxisSpacing: 16,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.65,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.72,
       );
     } else if (screenWidth >= 600) {
       // Small tablet - 3 columns
       return const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 16,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.65,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.70,
       );
     } else {
-      // Mobile - 2 columns (iPhone 12 Pro, Galaxy S8, Galaxy Z Fold, etc)
+      // Mobile - 2 columns
       return const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.56,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.65,
       );
     }
   }
@@ -1149,6 +1260,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool get _hasActiveFilters {
     return _selectedCategoryId != null ||
+        _selectedMainCategoryId != null ||
+        _selectedSubcategoryId != null ||
         _selectedCondition != null ||
         _minPrice != null ||
         _maxPrice != null ||

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../utils/theme.dart';
+import '../../utils/auth_helpers.dart';
 import '../../models/conversation_model.dart';
 import 'conversation_screen.dart';
 
@@ -33,6 +34,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final auth = context.watch<AuthProvider>();
 
     if (!auth.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showAuthModal(context, featureName: 'Mensagens');
+      });
       return Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -48,19 +52,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ),
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.lock_outline,
-                  size: 64,
-                  color: AppColors.primary,
-                ),
+                const Icon(Icons.lock_outline, size: 64, color: AppColors.primary),
                 const SizedBox(height: 16),
                 Text(
                   'Faça login para acessar Mensagens',
-                  style: AppTextStyles.heading2,
+                  style: AppTextStyles.heading3,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -68,18 +68,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   'Entre para enviar e receber mensagens com outros usuários.',
                   style: AppTextStyles.bodySmall,
                   textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacementNamed('/login');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  ),
-                  child: const Text('Fazer login'),
                 ),
               ],
             ),

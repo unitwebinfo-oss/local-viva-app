@@ -27,7 +27,11 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
   final _priceController = TextEditingController();
   final _phoneController = TextEditingController();
   final _cepController = TextEditingController();
-  
+  final _stateController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _neighborhoodController = TextEditingController();
+  final _addressController = TextEditingController();
+
   String? _selectedCategoryId;
   String? _selectedCondition;
   String? _selectedCity;
@@ -72,6 +76,10 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
     _priceController.dispose();
     _phoneController.dispose();
     _cepController.dispose();
+    _stateController.dispose();
+    _cityController.dispose();
+    _neighborhoodController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -172,20 +180,20 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
   }
 
   Future<void> _searchCep(String cep) async {
-    if (cep.length < 8) return;
-    
+    final cleanCep = cep.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanCep.length != 8) return;
+
     setState(() {
       _isSearchingCep = true;
     });
 
     try {
-      final response = await ApiService.get('/cep?cep=$cep');
-      
+      final response = await ApiService.get('/cep?cep=$cleanCep');
+
       if (kDebugMode) {
         print('CEP Response: $response');
-        print('Response type: ${response.runtimeType}');
       }
-      
+
       if (response != null && response is Map) {
         if (response['success'] == true && response['data'] != null) {
           final data = response['data'];
@@ -198,6 +206,10 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
             _selectedCity = data['localidade']?.toString() ?? '';
             _selectedState = data['uf']?.toString() ?? '';
             _cep = data['cep']?.toString() ?? '';
+            _stateController.text = _selectedState ?? '';
+            _cityController.text = _selectedCity ?? '';
+            _neighborhoodController.text = _neighborhood ?? '';
+            _addressController.text = _address ?? '';
           });
         } else {
           _showError(response['error']?.toString() ?? 'CEP não encontrado');
@@ -295,8 +307,14 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
         return;
       }
 
+      String title = _titleController.text.trim();
+      // Normalize ALL CAPS titles
+      if (_isMostlyUppercase(title)) {
+        title = _toTitleCase(title);
+      }
+
       final adData = {
-        'title': _titleController.text.trim(),
+        'title': title,
         'description': _descriptionController.text.trim(),
         'price': _priceController.text.trim().isEmpty ? null : _priceController.text.replaceAll(',', '.'),
         'negotiable': _negotiable ? 1 : 0,
@@ -531,6 +549,67 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
     );
   }
 
+  bool _isMostlyUppercase(String text) {
+    final letters = text.replaceAll(RegExp(r'[^a-zA-Z]'), '');
+    if (letters.isEmpty) return false;
+    final upperCount = letters.split('').where((c) => c == c.toUpperCase()).length;
+    return upperCount / letters.length > 0.7;
+  }
+
+  String _toTitleCase(String text) {
+    return text.toLowerCase().split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
+  }
+
+  Widget _buildSectionTitle(IconData icon, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value, IconData icon, {TextEditingController? controller}) {
+    return TextFormField(
+      readOnly: true,
+      controller: controller,
+      initialValue: controller == null ? value : null,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -554,116 +633,94 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Título do anúncio *',
-                        border: OutlineInputBorder(),
+                    _buildSectionTitle(Icons.edit_note, 'Informações Básicas'),
+                    _buildCard(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _titleController,
+                            maxLength: 100,
+                            decoration: const InputDecoration(
+                              labelText: 'Título do anúncio *',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.title),
+                              counterText: '',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) return 'Campo obrigatório';
+                              if (value.trim().length < 5) return 'Mínimo 5 caracteres';
+                              if (value.trim().length > 100) return 'Máximo 100 caracteres';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _descriptionController,
+                            maxLines: 4,
+                            decoration: const InputDecoration(
+                              labelText: 'Descrição *',
+                              border: OutlineInputBorder(),
+                              hintText: 'Descreva seu produto ou serviço...',
+                              prefixIcon: Icon(Icons.description_outlined),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) return 'Campo obrigatório';
+                              if (value.trim().length < 10) return 'Mínimo 10 caracteres';
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Campo obrigatório';
-                        }
-                        if (value.trim().length < 5) {
-                          return 'Mínimo 5 caracteres';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Description
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        labelText: 'Descrição *',
-                        border: OutlineInputBorder(),
-                        hintText: 'Descreva seu produto ou serviço...',
+                    _buildSectionTitle(Icons.category_outlined, 'Categoria'),
+                    _buildCard(
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            value: _selectedMainCategoryId,
+                            decoration: const InputDecoration(
+                              labelText: 'Categoria Principal *',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _mainCategories
+                                .where((c) => c != null && c['id'] != null)
+                                .map((c) => DropdownMenuItem(
+                                      value: c['id']?.toString(),
+                                      child: Text(c['name'] ?? ''),
+                                    ))
+                                .toList(),
+                            onChanged: _onMainCategoryChanged,
+                            validator: (value) => value == null ? 'Selecione uma categoria' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: _selectedSubcategoryId,
+                            decoration: const InputDecoration(
+                              labelText: 'Subcategoria *',
+                              border: OutlineInputBorder(),
+                              hintText: 'Selecione primeiro a categoria principal',
+                            ),
+                            items: _filteredSubcategories
+                                .map((c) => DropdownMenuItem(
+                                      value: c['id']?.toString(),
+                                      child: Text(c['name'] ?? ''),
+                                    ))
+                                .toList(),
+                            onChanged: _selectedMainCategoryId != null ? _onSubcategoryChanged : null,
+                            validator: (value) => value == null ? 'Selecione uma subcategoria' : null,
+                          ),
+                        ],
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Campo obrigatório';
-                        }
-                        if (value.trim().length < 10) {
-                          return 'Mínimo 10 caracteres';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Main Category
-                    DropdownButtonFormField<String>(
-                      value: _selectedMainCategoryId,
-                      decoration: const InputDecoration(
-                        labelText: 'Categoria Principal *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _mainCategories
-                          .where((category) => category != null && category['id'] != null)
-                          .map((category) {
-                            return DropdownMenuItem(
-                              value: category['id']?.toString(),
-                              child: Text(
-                                category['name'] ?? '',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            );
-                          })
-                          .toList(),
-                      onChanged: _onMainCategoryChanged,
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Selecione uma categoria principal';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Subcategory
-                    DropdownButtonFormField<String>(
-                      value: _selectedSubcategoryId,
-                      decoration: const InputDecoration(
-                        labelText: 'Subcategoria *',
-                        border: OutlineInputBorder(),
-                        hintText: 'Selecione primeiro a categoria principal',
-                      ),
-                      items: _filteredSubcategories
-                          .map((category) {
-                            return DropdownMenuItem(
-                              value: category['id']?.toString(),
-                              child: Text(
-                                category['name'] ?? '',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            );
-                          })
-                          .toList(),
-                      onChanged: _selectedMainCategoryId != null ? _onSubcategoryChanged : null,
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Selecione uma subcategoria';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Price and Negotiable
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
+                    _buildSectionTitle(Icons.attach_money, 'Preço'),
+                    _buildCard(
+                      child: Column(
+                        children: [
+                          TextFormField(
                             controller: _priceController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
@@ -671,172 +728,128 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
                               border: OutlineInputBorder(),
                               prefixText: 'R\$ ',
                               hintText: '0,00',
+                              prefixIcon: Icon(Icons.monetization_on_outlined),
                             ),
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                               _CurrencyInputFormatter(),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: CheckboxListTile(
-                            title: const Text('Negociável'),
+                          const SizedBox(height: 8),
+                          CheckboxListTile(
+                            title: const Text('Preço negociável'),
                             value: _negotiable,
-                            onChanged: (value) {
-                              setState(() {
-                                _negotiable = value ?? false;
-                              });
-                            },
+                            onChanged: (value) => setState(() => _negotiable = value ?? false),
                             controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: EdgeInsets.zero,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // CEP
-                    TextFormField(
-                      controller: _cepController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'CEP',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: _isSearchingCep
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              )
-                            : IconButton(
-                                icon: const Icon(Icons.search),
-                                onPressed: () => _searchCep(_cepController.text),
-                              ),
-                      ),
-                      onChanged: (value) {
-                        if (value.length == 8 && !_isSearchingCep) {
-                          _searchCep(value);
-                        }
-                      },
-                    ),
-                    
-const SizedBox(height: 16),
-
-                    // Estado
-                    TextFormField(
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        labelText: 'Estado',
-                        border: const OutlineInputBorder(),
-                        hintText: _selectedState ?? 'Será preenchido automaticamente',
-                      ),
-                      controller: TextEditingController(text: _selectedState ?? ''),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Cidade
-                    TextFormField(
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        labelText: 'Cidade',
-                        border: const OutlineInputBorder(),
-                        hintText: _selectedCity ?? 'Será preenchido automaticamente',
-                      ),
-                      controller: TextEditingController(text: _selectedCity ?? ''),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Bairro
-                    TextFormField(
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        labelText: 'Bairro',
-                        border: const OutlineInputBorder(),
-                        hintText: _neighborhood ?? 'Será preenchido automaticamente',
-                      ),
-                      controller: TextEditingController(text: _neighborhood ?? ''),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Endereço/Logradouro
-                    if (_address != null && _address!.isNotEmpty)
-                      Column(
-                        children: [
-                          TextFormField(
-                            readOnly: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Endereço',
-                              border: OutlineInputBorder(),
-                            ),
-                            controller: TextEditingController(text: _address ?? ''),
-                          ),
-                          const SizedBox(height: 16),
                         ],
                       ),
-
-                    // Condition
-                    DropdownButtonFormField<String>(
-                      value: _selectedCondition,
-                      decoration: const InputDecoration(
-                        labelText: 'Condição',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: null, child: Text('Selecione')),
-                        DropdownMenuItem(value: 'new', child: Text('Novo')),
-                        DropdownMenuItem(value: 'used', child: Text('Usado')),
-                        DropdownMenuItem(value: 'not_applicable', child: Text('Não aplicável')),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCondition = value;
-                        });
-                      },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Phone
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone *',
-                        border: OutlineInputBorder(),
-                        prefixText: '+55 ',
-                        hintText: '(11) 00000-0000',
+                    _buildSectionTitle(Icons.location_on_outlined, 'Localização'),
+                    _buildCard(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _cepController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'CEP',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.local_post_office_outlined),
+                              suffixIcon: _isSearchingCep
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                                    )
+                                  : IconButton(
+                                      icon: const Icon(Icons.search),
+                                      onPressed: () => _searchCep(_cepController.text),
+                                    ),
+                            ),
+                            onChanged: (value) {
+                              final clean = value.replaceAll(RegExp(r'[^0-9]'), '');
+                              if (clean.length == 8 && !_isSearchingCep) _searchCep(clean);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildReadOnlyField('Estado', _selectedState ?? '', Icons.map_outlined, controller: _stateController),
+                          const SizedBox(height: 12),
+                          _buildReadOnlyField('Cidade', _selectedCity ?? '', Icons.location_city_outlined, controller: _cityController),
+                          const SizedBox(height: 12),
+                          _buildReadOnlyField('Bairro', _neighborhood ?? '', Icons.house_outlined, controller: _neighborhoodController),
+                          if (_address != null && _address!.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildReadOnlyField('Endereço', _address ?? '', Icons.signpost_outlined, controller: _addressController),
+                          ],
+                        ],
                       ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        _PhoneInputFormatter(),
-                      ],
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Campo obrigatório';
-                        }
-                        // Remove all non-digit characters for validation
-                        String cleanPhone = value.replaceAll(RegExp(r'[^0-9]'), '');
-                        if (cleanPhone.length < 10) {
-                          return 'Telefone inválido (mínimo 10 dígitos)';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
-                    // Image Gallery
-                    _buildImageGallery(),
-                    const SizedBox(height: 24),
+                    _buildSectionTitle(Icons.settings, 'Detalhes'),
+                    _buildCard(
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            value: _selectedCondition,
+                            decoration: const InputDecoration(
+                              labelText: 'Condição',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: null, child: Text('Selecione')),
+                              DropdownMenuItem(value: 'new', child: Text('Novo')),
+                              DropdownMenuItem(value: 'used', child: Text('Usado')),
+                              DropdownMenuItem(value: 'not_applicable', child: Text('Não aplicável')),
+                            ],
+                            onChanged: (value) => setState(() => _selectedCondition = value),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Telefone *',
+                              border: OutlineInputBorder(),
+                              prefixText: '+55 ',
+                              hintText: '(11) 00000-0000',
+                              prefixIcon: Icon(Icons.phone_outlined),
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              _PhoneInputFormatter(),
+                            ],
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) return 'Campo obrigatório';
+                              String cleanPhone = value.replaceAll(RegExp(r'[^0-9]'), '');
+                              if (cleanPhone.length < 10) return 'Telefone inválido';
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
-                    // Ad Limit Indicator
+                    _buildSectionTitle(Icons.photo_camera_outlined, 'Fotos'),
+                    _buildCard(
+                      child: _buildImageGallery(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Ad Limit
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: _adLimitInfo['canCreate'] ? Colors.green.shade50 : Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _adLimitInfo['canCreate'] ? Colors.green.shade200 : Colors.red.shade200,
                         ),
@@ -846,18 +859,16 @@ const SizedBox(height: 16),
                           Icon(
                             _adLimitInfo['canCreate'] ? Icons.check_circle : Icons.warning,
                             color: _adLimitInfo['canCreate'] ? Colors.green : Colors.red,
-                            size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              _adLimitInfo['canCreate'] 
-                                ? 'Você pode criar ${_adLimitInfo['remaining']} anúncio(s)'
-                                : 'Limite atingido: ${_adLimitInfo['current']}/${_adLimitInfo['limit']} anúncios',
+                              _adLimitInfo['canCreate']
+                                  ? 'Você pode criar ${_adLimitInfo['remaining']} anúncio(s)'
+                                  : 'Limite atingido: ${_adLimitInfo['current']}/${_adLimitInfo['limit']}',
                               style: TextStyle(
                                 color: _adLimitInfo['canCreate'] ? Colors.green.shade800 : Colors.red.shade800,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -866,27 +877,27 @@ const SizedBox(height: 16),
                     ),
                     const SizedBox(height: 16),
 
-                    // Submit Button
+                    // Submit
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
+                      height: 52,
+                      child: ElevatedButton.icon(
                         onPressed: (_isLoading || !_adLimitInfo['canCreate']) ? null : _createAd,
+                        icon: _isLoading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.publish),
+                        label: Text(
+                          _adLimitInfo['canCreate'] ? 'Publicar Anúncio' : 'Limite Atingido',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _adLimitInfo['canCreate'] ? AppColors.primary : Colors.grey,
                           foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : Text(
-                                _adLimitInfo['canCreate'] ? 'Criar Anúncio' : 'Limite Atingido',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                       ),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),

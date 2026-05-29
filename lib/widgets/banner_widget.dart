@@ -27,8 +27,9 @@ class BannerWidget extends StatelessWidget {
 
     return Container(
       margin: fullWidth 
-        ? const EdgeInsets.symmetric(horizontal: 5, vertical: 8)
+        ? EdgeInsets.zero
         : const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: double.infinity,
       child: ClipRRect(
         borderRadius: fullWidth ? BorderRadius.zero : BorderRadius.circular(12),
         child: Material(
@@ -37,22 +38,22 @@ class BannerWidget extends StatelessWidget {
             onTap: onTap ?? () => _handleBannerTap(context),
             child: CachedNetworkImage(
               imageUrl: imageUrl!,
-              fit: BoxFit.contain,
+              fit: BoxFit.fitWidth,
               width: double.infinity,
               placeholder: (context, url) => AspectRatio(
-                aspectRatio: 16 / 9,
+                aspectRatio: 3.5,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: fullWidth ? BorderRadius.zero : BorderRadius.circular(12),
                   ),
                   child: const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
               ),
               errorWidget: (context, url, error) => AspectRatio(
-                aspectRatio: 16 / 9,
+                aspectRatio: 3.5,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
@@ -70,22 +71,6 @@ class BannerWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  
-  double _getBannerHeight(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    if (screenWidth < 768) {
-      // Mobile
-      return 120;
-    } else if (screenWidth < 1200) {
-      // Tablet
-      return 160;
-    } else {
-      // Desktop
-      return 200;
-    }
   }
 
   Future<void> _handleBannerTap(BuildContext context) async {

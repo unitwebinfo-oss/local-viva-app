@@ -5,6 +5,8 @@ import '../../models/ad_model.dart';
 import '../../utils/theme.dart';
 import '../../widgets/ad_card.dart';
 import '../ads/ad_detail_screen.dart';
+import '../../services/api_service.dart';
+import '../../config/api_config.dart';
 
 class AdsListScreen extends StatefulWidget {
   final int? categoryId;
@@ -32,13 +34,23 @@ class _AdsListScreenState extends State<AdsListScreen> {
   String _sortBy = 'recent';
   bool _isSearching = false;
 
+  List<Map<String, dynamic>> _allCategories = [];
+  List<Map<String, dynamic>> _subcategories = [];
+  int? _selectedMainCategoryId;
+  int? _selectedSubcategoryId;
+  int? _selectedCategoryId;
+
   @override
   void initState() {
     super.initState();
     if (widget.searchQuery != null) {
       _searchController.text = widget.searchQuery!;
     }
+    if (widget.categoryId != null) {
+      _selectedCategoryId = widget.categoryId;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCategories();
       _fetchAds();
     });
 
@@ -64,12 +76,32 @@ class _AdsListScreenState extends State<AdsListScreen> {
     super.dispose();
   }
 
+  Future<void> _loadCategories() async {
+    try {
+      final response = await ApiService.get(ApiConfig.categories);
+      if (response['success'] == true && response['categories'] is List) {
+        setState(() {
+          _allCategories = (response['categories'] as List)
+              .map((c) => {
+                    'id': c['id'],
+                    'name': c['name'],
+                    'parent_id': c['parent_id'],
+                  })
+              .toList()
+              .cast<Map<String, dynamic>>();
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   Future<void> _fetchAds() async {
     final adsProvider = Provider.of<AdsProvider>(context, listen: false);
     final searchText = _searchController.text.trim();
     
     await adsProvider.fetchAds(
-      categoryId: widget.categoryId,
+      categoryId: _selectedCategoryId ?? widget.categoryId,
       condition: _selectedCondition,
       minPrice: _minPrice,
       maxPrice: _maxPrice,
@@ -85,7 +117,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
     if (!adsProvider.isLoading && adsProvider.hasMore) {
       final searchText = _searchController.text.trim();
       await adsProvider.loadMore(
-        categoryId: widget.categoryId,
+        categoryId: _selectedCategoryId ?? widget.categoryId,
         condition: _selectedCondition,
         minPrice: _minPrice,
         maxPrice: _maxPrice,
@@ -138,6 +170,92 @@ class _AdsListScreenState extends State<AdsListScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+              
+              // Category filter
+              if (_allCategories.isNotEmpty) ...[
+                const Text(
+                  'Categoria',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int?>(
+                      value: _selectedMainCategoryId,
+                      isExpanded: true,
+                      hint: const Text('Todas as categorias'),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('Todas as categorias'),
+                        ),
+                        ..._allCategories
+                            .where((c) => c['parent_id'] == null || c['parent_id'] == 0)
+                            .map(
+                              (cat) => DropdownMenuItem<int?>(
+                                value: cat['id'] as int?,
+                                child: Text(cat['name'] as String),
+                              ),
+                            ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedMainCategoryId = value;
+                          _selectedSubcategoryId = null;
+                          if (value != null) {
+                            _subcategories = _allCategories
+                                .where((c) => c['parent_id'] == value)
+                                .toList();
+                          } else {
+                            _subcategories = [];
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                if (_subcategories.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  InputDecorator(
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int?>(
+                        value: _selectedSubcategoryId,
+                        isExpanded: true,
+                        hint: const Text('Subcategoria'),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Todas as subcategorias'),
+                          ),
+                          ..._subcategories.map(
+                            (cat) => DropdownMenuItem<int?>(
+                              value: cat['id'] as int?,
+                              child: Text(cat['name'] as String),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSubcategoryId = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+              ],
               
               // Condition filter
               const Text(
@@ -224,6 +342,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
+                    _selectedCategoryId = _selectedSubcategoryId ?? _selectedMainCategoryId;
                     Navigator.pop(context);
                     _fetchAds();
                   },
@@ -397,7 +516,7 @@ class _AdsListScreenState extends State<AdsListScreen> {
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.55, // Further reduced to prevent overflow
+                childAspectRatio: 0.65,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),

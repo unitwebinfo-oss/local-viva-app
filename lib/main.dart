@@ -19,9 +19,13 @@ import 'screens/ads/create_ad_screen.dart';
 import 'screens/ads/my_ads_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/messages/messages_screen.dart';
+import 'screens/favorites/favorites_screen.dart';
 import 'screens/ads/ad_detail_screen.dart';
 import 'utils/theme.dart';
 import 'services/error_reporting_service.dart';
+
+// Global route observer for route-aware widgets
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +80,7 @@ class LocalVivaApp extends StatelessWidget {
           textTheme: GoogleFonts.interTextTheme(),
           useMaterial3: true,
         ),
+        navigatorObservers: [routeObserver],
         home: const SplashScreen(),
         routes: {
           '/login': (context) => const LoginScreen(),
@@ -84,6 +89,7 @@ class LocalVivaApp extends StatelessWidget {
           '/my_ads': (context) => const MyAdsScreen(),
           '/profile': (context) => const ProfileScreen(),
           '/messages': (context) => const MessagesScreen(),
+          '/favorites': (context) => const FavoritesScreen(),
           '/ad-detail': (context) {
             final ad = ModalRoute.of(context)?.settings.arguments as AdModel?;
             if (ad == null) {
